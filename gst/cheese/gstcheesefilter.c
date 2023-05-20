@@ -195,9 +195,9 @@ gst_cheesefilter_transform_ip (GstBaseTransform * base, GstBuffer * outbuf)
  * register the element factories and other features
  */
 static gboolean
-cheese_filter_init (GstPlugin * cheese_filter)
+cheese_init (GstPlugin * plugin)
 {
-  return GST_ELEMENT_REGISTER (cheesefilter, cheese_filter);
+  return GST_ELEMENT_REGISTER (cheesefilter, plugin);
 }
 
 /* gstreamer looks for this structure to register cheese_filters
@@ -206,7 +206,7 @@ cheese_filter_init (GstPlugin * cheese_filter)
  */
 GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
     GST_VERSION_MINOR,
-    cheese_filter,
-    "cheesefilter",
-    cheese_filter_init,
+    cheese,
+    "cheese",
+    cheese_init,
     PACKAGE_VERSION, GST_LICENSE, GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN)
