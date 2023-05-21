@@ -39,6 +39,7 @@
 #include <gst/gst.h>
 #include <gst/base/base.h>
 #include <gst/controller/controller.h>
+#include <opencv2/core.hpp>
 
 #include "gstcheesefilter.h"
 
@@ -75,7 +76,7 @@ static GstStaticPadTemplate src_template = GST_STATIC_PAD_TEMPLATE ("src",
     );
 
 #define gst_cheesefilter_parent_class parent_class
-G_DEFINE_TYPE (Gstcheesefilter, gst_cheesefilter, GST_TYPE_BASE_TRANSFORM);
+G_DEFINE_TYPE (Gstcheesefilter, gst_cheesefilter, GST_TYPE_OPENCV_VIDEO_FILTER);
 GST_ELEMENT_REGISTER_DEFINE (cheesefilter, "cheesefilter", GST_RANK_NONE,
     GST_TYPE_CHEESE_FILTER);
 
@@ -84,8 +85,8 @@ static void gst_cheesefilter_set_property (GObject * object,
 static void gst_cheesefilter_get_property (GObject * object,
     guint prop_id, GValue * value, GParamSpec * pspec);
 
-static GstFlowReturn gst_cheesefilter_transform_ip (GstBaseTransform *
-    base, GstBuffer * outbuf);
+static GstFlowReturn gst_cheesefilter_transform_ip (GstOpencvVideoFilter *
+    base, GstBuffer * outbuf, cv::Mat img);
 
 /* GObject vmethod implementations */
 
@@ -104,7 +105,7 @@ gst_cheesefilter_class_init (GstcheesefilterClass * klass)
 
   g_object_class_install_property (gobject_class, PROP_SILENT,
       g_param_spec_boolean ("silent", "Silent", "Produce verbose output ?",
-          FALSE, G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE));
+          FALSE, (GParamFlags) (G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE)));
 
   gst_element_class_set_details_simple (gstelement_class,
       "cheesefilter",
@@ -116,7 +117,7 @@ gst_cheesefilter_class_init (GstcheesefilterClass * klass)
   gst_element_class_add_pad_template (gstelement_class,
       gst_static_pad_template_get (&sink_template));
 
-  GST_BASE_TRANSFORM_CLASS (klass)->transform_ip =
+  GST_OPENCV_VIDEO_FILTER_CLASS (klass)->cv_trans_ip_func =
       GST_DEBUG_FUNCPTR (gst_cheesefilter_transform_ip);
 
   /* debug category for fltering log messages
@@ -168,12 +169,13 @@ gst_cheesefilter_get_property (GObject * object, guint prop_id,
   }
 }
 
-/* GstBaseTransform vmethod implementations */
+/* GstOpencvVideoFilter vmethod implementations */
 
 /* this function does the actual processing
  */
 static GstFlowReturn
-gst_cheesefilter_transform_ip (GstBaseTransform * base, GstBuffer * outbuf)
+gst_cheesefilter_transform_ip (GstOpencvVideoFilter * base, GstBuffer * outbuf,
+  cv::Mat img)
 {
   Gstcheesefilter *filter = GST_CHEESE_FILTER (base);
 

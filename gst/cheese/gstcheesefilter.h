@@ -24,18 +24,40 @@
 #define __GST_CHEESE_FILTER_H__
 
 #include <gst/gst.h>
-#include <gst/base/gstbasetransform.h>
+#include <gst/opencv/gstopencvvideofilter.h>
 
 G_BEGIN_DECLS
 
-#define GST_TYPE_CHEESE_FILTER (gst_cheesefilter_get_type())
-G_DECLARE_FINAL_TYPE (Gstcheesefilter, gst_cheesefilter,
-    GST, CHEESE_FILTER, GstBaseTransform)
+// #define GST_TYPE_CHEESE_FILTER (gst_cheesefilter_get_type())
+// G_DECLARE_FINAL_TYPE (Gstcheesefilter, gst_cheesefilter,
+//    GST, CHEESE_FILTER, GstOpencvVideoFilter)
 
-struct _Gstcheesefilter {
-  GstBaseTransform element;
+#define GST_TYPE_CHEESE_FILTER \
+  (gst_cheesefilter_get_type())
+#define GST_CHEESE_FILTER(obj) \
+  (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_CHEESE_FILTER,Gstcheesefilter))
+#define GST_CHEESE_FILTER_CLASS(klass) \
+  (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_CHEESE_FILTER,GstcheesefilterClass))
+#define GST_IS_CHEESE_FILTER(obj) \
+  (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_CHEESE_FILTER))
+#define GST_IS_CHEESE_FILTER_CLASS(klass) \
+  (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_CHEESE_FILTER))
+#define GST_CHEESE_FILTER_CLASS_GET_CLASS(obj) \
+  (G_TYPE_INSTANCE_GET_CLASS((obj),GST_TYPE_CHEESE_FILTER,GstcheesefilterClass))
+
+typedef struct _Gstcheesefilter  Gstcheesefilter;
+typedef struct _GstcheesefilterClass GstcheesefilterClass;
+
+struct _Gstcheesefilter
+{
+  GstOpencvVideoFilter element;
 
   gboolean silent;
+};
+
+struct _GstcheesefilterClass
+{
+  GstOpencvVideoFilterClass parent_class;
 };
 
 G_END_DECLS

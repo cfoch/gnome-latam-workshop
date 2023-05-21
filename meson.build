@@ -1,8 +1,8 @@
-project('gnome-latam-workshop', 'c', version : '0.0.0', license : 'LGPL')
+project('gnome-latam-workshop', 'cpp', version : '0.0.0', license : 'LGPL')
 
 plugins_install_dir = join_paths(get_option('libdir'), 'gstreamer-1.0')
 
-
+cpp_compiler = meson.get_compiler('cpp')
 pkg_version = meson.project_version()
 api_version = '1.0'
 
@@ -10,6 +10,11 @@ gst_dep = dependency('gstreamer-1.0', version : '>=1.19',
     required : true, fallback : ['gstreamer', 'gst_dep'])
 gstbase_dep = dependency('gstreamer-base-1.0', version : '>=1.19',
   fallback : ['gstreamer', 'gst_base_dep'])
+opencv_dep = dependency('opencv', version : '>= 3.0.0', required: false)
+if not opencv_dep.found()
+  opencv_dep = dependency('opencv4', version : '>= 4.0.0', required: true)
+endif
+gstopencv_dep = cpp_compiler.find_library('gstopencv-1.0', required: true)
 
 plugin_c_args = ['-DHAVE_CONFIG_H']
 

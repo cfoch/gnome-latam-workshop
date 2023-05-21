@@ -1,13 +1,13 @@
 sources = [
-  'gstcheesefilter.c',
+  'gstcheesefilter.cpp',
 ]
 
 configure_file(output : 'config.h', configuration : cdata)
 
 gstcheese_filterexample = library('gstcheese',
   sources,
-  c_args: plugin_c_args,
-  dependencies : [gst_dep, gstbase_dep],
+  cpp_args: plugin_c_args,
+  dependencies : [gst_dep, gstbase_dep, opencv_dep, gstopencv_dep],
   install : true,
   install_dir : plugins_install_dir,
 )

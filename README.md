@@ -36,3 +36,51 @@ gstcheesefilter.h
 Estos archivos serán útiles para compilar el primer binario que pueda ser leído
 por GStreamer.
 
+### Cambiar la clase base a GstOpencvVideoFilter
+
+Hasta este momento, el plugin hereda de GstBaseTransform, como se puede ver
+ejecutando `gst-inspect-1.0 --gst-plugin-load ./builddir/gst/cheese/libgstcheese.so cheesefilter`.
+
+```
+GObject
+ +----GInitiallyUnowned
+       +----GstObject
+             +----GstElement
+                   +----GstBaseTransform
+                         +----Gstcheesefilter
+```
+
+GstBaseTranform es una clase base para filtros, que provee dos funciones
+principalmente:
+
+- [transform](https://gstreamer.freedesktop.org/documentation/base/gstbasetransform.html?gi-language=c#GstBaseTransformClass::transform):
+  recibe un buffer de entrada (*inbuf*) y uno de salida (*outbuf*) ya previamente reservados en memoria. El desarrollador deberá colocar
+  el resultado en *outbuf*.
+- [transform_ip](https://gstreamer.freedesktop.org/documentation/base/gstbasetransform.html?gi-language=c#GstBaseTransformClass::transform_ip):
+  recibe un buffer de entrada (*inbuf*) que será reusado como buffer de salida.
+
+GstOpencvVideoFilter hereda de GstBaseTransform, e implementa ambas funciones
+virtuales, envolviendo los buffers en [cv::Mat](https://docs.opencv.org/4.x/d3/d63/classcv_1_1Mat.html),
+y volviéndolas a exportar en las funciones virtuales análogas:
+
+- [cv_trans_func](https://gitlab.freedesktop.org/gstreamer/gstreamer/-/blob/main/subprojects/gst-plugins-bad/gst-libs/gst/opencv/gstopencvvideofilter.cpp#L129):
+- [cv_trans_ip_func]((https://gitlab.freedesktop.org/gstreamer/gstreamer/-/blob/main/subprojects/gst-plugins-bad/gst-libs/gst/opencv/gstopencvvideofilter.cpp#L152)
+
+Ya que es más sencillo trabajar con [cv::Mat](https://docs.opencv.org/4.x/d3/d63/classcv_1_1Mat.html), heredaremos de esta clase base. Para
+ello, podemos reemplazar en nuestro código todas las referencias a GstBaseTransform por GstOpencvVideoFilter. Además será necesario en meson,
+agregar dependencias a `opencv` y enlazar con `libgstopencv-1.0.so`.
+
+Una vez hecho ello, se puede ver con gst-inspect-1.0, el siguiente árbol de
+herencias:
+
+```
+GObject
+ +----GInitiallyUnowned
+       +----GstObject
+             +----GstElement
+                   +----GstBaseTransform
+                         +----GstVideoFilter
+                               +----GstOpencvVideoFilter
+                                     +----Gstcheesefilter
+```
+
