@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update
 
 # Install build utils
-RUN apt install -y meson ninja-build
+RUN apt install -y meson ninja-build make
 # Install OpenCV
 RUN apt install -y libopencv-dev
 # Install GStreamer
