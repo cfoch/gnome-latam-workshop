@@ -53,6 +53,8 @@ struct _Gstcheesefilter
   GstOpencvVideoFilter element;
 
   gboolean silent;
+  gchar *color;
+  cv::Scalar cv_color;
 };
 
 struct _GstcheesefilterClass
