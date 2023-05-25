@@ -40,6 +40,7 @@
 #include <gst/base/base.h>
 #include <gst/controller/controller.h>
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include "gstcheesefilter.h"
 
@@ -180,6 +181,9 @@ gst_cheesefilter_transform_ip (GstOpencvVideoFilter * base, GstBuffer * outbuf,
   cv::Mat img)
 {
   Gstcheesefilter *filter = GST_CHEESE_FILTER (base);
+  cv::Mat mask;
+  int i, n_circles = 10;
+
 
   if (GST_CLOCK_TIME_IS_VALID (GST_BUFFER_TIMESTAMP (outbuf)))
     gst_object_sync_values (GST_OBJECT (filter), GST_BUFFER_TIMESTAMP (outbuf));
@@ -187,8 +191,17 @@ gst_cheesefilter_transform_ip (GstOpencvVideoFilter * base, GstBuffer * outbuf,
   if (filter->silent == FALSE)
     g_print ("I'm plugged, therefore I'm in.\n");
 
-  /* FIXME: do something interesting here.  This simply copies the source
-   * to the destination. */
+
+  for (i = 0; i < n_circles; i++) {
+      int radius = img.rows / 50;
+      cv::Point center(
+          g_random_int_range(0, img.cols),
+          g_random_int_range(0, img.rows)
+      );
+      cv::Scalar color(255, 255, 255);
+
+      cv::circle(img, center, radius, color, -1);
+  }
 
   return GST_FLOW_OK;
 }
