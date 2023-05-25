@@ -57,7 +57,7 @@ enum
 enum
 {
   PROP_0,
-  PROP_SILENT,
+  PROP_COLOR
 };
 
 /* the capabilities of the inputs and outputs.
@@ -81,6 +81,7 @@ G_DEFINE_TYPE (Gstcheesefilter, gst_cheesefilter, GST_TYPE_OPENCV_VIDEO_FILTER);
 GST_ELEMENT_REGISTER_DEFINE (cheesefilter, "cheesefilter", GST_RANK_NONE,
     GST_TYPE_CHEESE_FILTER);
 
+static void gst_cheesefilter_finalize (GObject * object);
 static void gst_cheesefilter_set_property (GObject * object,
     guint prop_id, const GValue * value, GParamSpec * pspec);
 static void gst_cheesefilter_get_property (GObject * object,
@@ -103,10 +104,11 @@ gst_cheesefilter_class_init (GstcheesefilterClass * klass)
 
   gobject_class->set_property = gst_cheesefilter_set_property;
   gobject_class->get_property = gst_cheesefilter_get_property;
+  gobject_class->finalize = gst_cheesefilter_finalize;
 
-  g_object_class_install_property (gobject_class, PROP_SILENT,
-      g_param_spec_boolean ("silent", "Silent", "Produce verbose output ?",
-          FALSE, (GParamFlags) (G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE)));
+  g_object_class_install_property (gobject_class, PROP_COLOR,
+      g_param_spec_string ("color", "Color", "color: red, green, blue, white, black",
+          "white", (GParamFlags) (G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE)));
 
   gst_element_class_set_details_simple (gstelement_class,
       "cheesefilter",
@@ -136,8 +138,19 @@ static void
 gst_cheesefilter_init (Gstcheesefilter * filter)
 {
   filter->silent = FALSE;
+  filter->color = g_strdup ("white");
+  filter->cv_color = cv::Scalar(255, 255, 255);
   gst_opencv_video_filter_set_in_place (GST_OPENCV_VIDEO_FILTER_CAST (filter),
       TRUE);
+}
+
+static void
+gst_cheesefilter_finalize (GObject * object)
+{
+  Gstcheesefilter *filter = GST_CHEESE_FILTER (object);
+
+  g_free (filter->color);
+  G_OBJECT_CLASS (parent_class)->finalize (object);
 }
 
 static void
@@ -147,9 +160,34 @@ gst_cheesefilter_set_property (GObject * object, guint prop_id,
   Gstcheesefilter *filter = GST_CHEESE_FILTER (object);
 
   switch (prop_id) {
-    case PROP_SILENT:
-      filter->silent = g_value_get_boolean (value);
+    case PROP_COLOR:
+    {
+      static const gchar *const color_names[] = {"black", "white", "blue", "green", "red"};
+      static const cv::Scalar color_values[] = {
+        cv::Scalar(0, 0, 0),
+        cv::Scalar(255, 255, 255),
+        cv::Scalar(0, 0, 255),
+        cv::Scalar(0, 255, 0),
+        cv::Scalar(255, 0, 0)
+      };
+      const gchar *color = g_value_get_string (value);
+      guint i;
+
+      for (i = 0; i < G_N_ELEMENTS (color_names); i++) {
+        if (g_strcmp0 (color_names[i], color) == 0)
+          break;
+      }
+
+      if (i == G_N_ELEMENTS (color_names)) {
+        g_warning ("color %s is not supported.", color);
+        break;
+      }
+
+      g_free (filter->color);
+      filter->color = g_strdup (color);
+      filter->cv_color = color_values[i];
       break;
+    }
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -163,8 +201,8 @@ gst_cheesefilter_get_property (GObject * object, guint prop_id,
   Gstcheesefilter *filter = GST_CHEESE_FILTER (object);
 
   switch (prop_id) {
-    case PROP_SILENT:
-      g_value_set_boolean (value, filter->silent);
+    case PROP_COLOR:
+      g_value_set_string (value, filter->color);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -188,19 +226,14 @@ gst_cheesefilter_transform_ip (GstOpencvVideoFilter * base, GstBuffer * outbuf,
   if (GST_CLOCK_TIME_IS_VALID (GST_BUFFER_TIMESTAMP (outbuf)))
     gst_object_sync_values (GST_OBJECT (filter), GST_BUFFER_TIMESTAMP (outbuf));
 
-  if (filter->silent == FALSE)
-    g_print ("I'm plugged, therefore I'm in.\n");
-
-
   for (i = 0; i < n_circles; i++) {
       int radius = img.rows / 50;
       cv::Point center(
           g_random_int_range(0, img.cols),
           g_random_int_range(0, img.rows)
       );
-      cv::Scalar color(255, 255, 255);
 
-      cv::circle(img, center, radius, color, -1);
+      cv::circle(img, center, radius, filter->cv_color, -1);
   }
 
   return GST_FLOW_OK;
