@@ -200,16 +200,22 @@ gst_cheesefilter_set_property (GObject * object, guint prop_id,
         break;
       }
 
+      GST_OBJECT_LOCK (filter);
       g_free (filter->color);
       filter->color = g_strdup (color);
       filter->cv_color = color_values[i];
+      GST_OBJECT_UNLOCK (filter);
       break;
     }
     case PROP_RADIUS:
+      GST_OBJECT_LOCK (filter);
       filter->radius = g_value_get_double (value);
+      GST_OBJECT_UNLOCK (filter);
       break;
     case PROP_N_CIRCLES:
+      GST_OBJECT_LOCK (filter);
       filter->n_circles = g_value_get_uint (value);
+      GST_OBJECT_UNLOCK (filter);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -225,13 +231,19 @@ gst_cheesefilter_get_property (GObject * object, guint prop_id,
 
   switch (prop_id) {
     case PROP_COLOR:
+      GST_OBJECT_LOCK (filter);
       g_value_set_string (value, filter->color);
+      GST_OBJECT_UNLOCK (filter);
       break;
     case PROP_RADIUS:
+      GST_OBJECT_LOCK (filter);
       g_value_set_double (value, filter->radius);
+      GST_OBJECT_UNLOCK (filter);
       break;
     case PROP_N_CIRCLES:
+      GST_OBJECT_LOCK (filter);
       g_value_set_uint (value, filter->n_circles);
+      GST_OBJECT_UNLOCK (filter);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -254,6 +266,7 @@ gst_cheesefilter_transform_ip (GstOpencvVideoFilter * base, GstBuffer * outbuf,
   if (GST_CLOCK_TIME_IS_VALID (GST_BUFFER_TIMESTAMP (outbuf)))
     gst_object_sync_values (GST_OBJECT (filter), GST_BUFFER_TIMESTAMP (outbuf));
 
+  GST_OBJECT_LOCK (filter);
   for (i = 0; i < filter->n_circles; i++) {
       cv::Point center(
           g_random_int_range(0, img.cols),
@@ -262,6 +275,7 @@ gst_cheesefilter_transform_ip (GstOpencvVideoFilter * base, GstBuffer * outbuf,
 
       cv::circle(img, center, img.rows * filter->radius, filter->cv_color, -1);
   }
+  GST_OBJECT_UNLOCK (filter);
 
   return GST_FLOW_OK;
 }
