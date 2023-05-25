@@ -57,8 +57,13 @@ enum
 enum
 {
   PROP_0,
-  PROP_COLOR
+  PROP_COLOR,
+  PROP_RADIUS,
+  PROP_N_CIRCLES
 };
+
+#define DEFAULT_RADIUS    0.02
+#define DEFAULT_N_CIRCLES 10
 
 /* the capabilities of the inputs and outputs.
  *
@@ -110,6 +115,16 @@ gst_cheesefilter_class_init (GstcheesefilterClass * klass)
       g_param_spec_string ("color", "Color", "color: red, green, blue, white, black",
           "white", (GParamFlags) (G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE)));
 
+  g_object_class_install_property (gobject_class, PROP_RADIUS,
+      g_param_spec_double ("radius", "Radius", "Radius size relative to image height",
+          0, 1.0, DEFAULT_RADIUS,
+          (GParamFlags) (G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE)));
+
+  g_object_class_install_property (gobject_class, PROP_N_CIRCLES,
+      g_param_spec_uint ("n-circles", "N Circles", "Number of circles to display",
+          0, G_MAXUINT, DEFAULT_N_CIRCLES,
+          (GParamFlags) (G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE)));
+
   gst_element_class_set_details_simple (gstelement_class,
       "cheesefilter",
       "Generic/Filter",
@@ -140,6 +155,8 @@ gst_cheesefilter_init (Gstcheesefilter * filter)
   filter->silent = FALSE;
   filter->color = g_strdup ("white");
   filter->cv_color = cv::Scalar(255, 255, 255);
+  filter->radius = DEFAULT_RADIUS;
+  filter->n_circles = DEFAULT_N_CIRCLES;
   gst_opencv_video_filter_set_in_place (GST_OPENCV_VIDEO_FILTER_CAST (filter),
       TRUE);
 }
@@ -187,6 +204,12 @@ gst_cheesefilter_set_property (GObject * object, guint prop_id,
       filter->cv_color = color_values[i];
       break;
     }
+    case PROP_RADIUS:
+      filter->radius = g_value_get_double (value);
+      break;
+    case PROP_N_CIRCLES:
+      filter->n_circles = g_value_get_uint (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -202,6 +225,12 @@ gst_cheesefilter_get_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_COLOR:
       g_value_set_string (value, filter->color);
+      break;
+    case PROP_RADIUS:
+      g_value_set_double (value, filter->radius);
+      break;
+    case PROP_N_CIRCLES:
+      g_value_set_uint (value, filter->n_circles);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -219,20 +248,18 @@ gst_cheesefilter_transform_ip (GstOpencvVideoFilter * base, GstBuffer * outbuf,
 {
   Gstcheesefilter *filter = GST_CHEESE_FILTER (base);
   cv::Mat mask;
-  int i, n_circles = 10;
-
+  guint i;
 
   if (GST_CLOCK_TIME_IS_VALID (GST_BUFFER_TIMESTAMP (outbuf)))
     gst_object_sync_values (GST_OBJECT (filter), GST_BUFFER_TIMESTAMP (outbuf));
 
-  for (i = 0; i < n_circles; i++) {
-      int radius = img.rows / 50;
+  for (i = 0; i < filter->n_circles; i++) {
       cv::Point center(
           g_random_int_range(0, img.cols),
           g_random_int_range(0, img.rows)
       );
 
-      cv::circle(img, center, radius, filter->cv_color, -1);
+      cv::circle(img, center, img.rows * filter->radius, filter->cv_color, -1);
   }
 
   return GST_FLOW_OK;

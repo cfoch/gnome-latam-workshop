@@ -55,6 +55,8 @@ struct _Gstcheesefilter
   gboolean silent;
   gchar *color;
   cv::Scalar cv_color;
+  gdouble radius;
+  guint n_circles;
 };
 
 struct _GstcheesefilterClass
