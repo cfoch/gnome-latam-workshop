@@ -135,6 +135,8 @@ static void
 gst_cheesefilter_init (Gstcheesefilter * filter)
 {
   filter->silent = FALSE;
+  gst_opencv_video_filter_set_in_place (GST_OPENCV_VIDEO_FILTER_CAST (filter),
+      TRUE);
 }
 
 static void
