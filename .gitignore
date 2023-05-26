@@ -1,3 +1,4 @@
 builddir/
 prefix/
 /.container_built
+/.v4l2_pid
