@@ -7,7 +7,11 @@ prefix = $(shell pwd)/prefix
 
 all: compile
 
-test: compile
+test: install
+	GST_DEBUG=cheese_filter:5 \
+	GST_PLUGIN_PATH=$(prefix) \
+	XDG_DATA_HOME=$(shell pwd) \
+	cheese
 
 install: configure
 	cd "$(builddir)" && meson install
@@ -22,24 +26,24 @@ $(builddir)/build.ninja:
 		--prefix "$(prefix)" \
 		"$(builddir)"
 
+container_test:
 container_install:
 container_compile:
 container_%: .container_built
-	docker run \
-		--rm \
-		--user $(shell id -u):$(shell id -g) \
-		--volume "$(PWD)":"/tmp/ws" \
-		--workdir "/tmp/ws" \
+	./x11docker \
+		--share=$(PWD) \
+		--webcam \
 		$(container_tag) \
-		make $*
+		-- \
+		make -C "$(PWD)" $*
 
 .container_built: Dockerfile
 	docker build ./ --tag "$(container_tag)" && touch "$@"
 
 clean:
 	-rm -fr "$(builddir)"
-	-rm .container_built
-	-rm "$(prefix)"
+	-rm -f .container_built
+	-rm -fr "$(prefix)"
 
 mrproper: clean
 	-docker image rm "$(container_tag)"
