@@ -7,7 +7,11 @@ prefix = $(shell pwd)/prefix
 
 all: compile
 
-test: compile
+test: install
+	GST_DEBUG=cheese_filter:5 \
+	GST_PLUGIN_PATH=$(prefix) \
+	XDG_DATA_HOME=$(PWD) \
+	cheese
 
 install: configure
 	cd "$(builddir)" && meson install

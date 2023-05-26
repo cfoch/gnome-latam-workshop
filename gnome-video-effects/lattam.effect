@@ -1,0 +1,4 @@
+[Effect]
+Name=Lattam
+Comment=GNOME Lattam effect
+PipelineDescription=cheesefilter
