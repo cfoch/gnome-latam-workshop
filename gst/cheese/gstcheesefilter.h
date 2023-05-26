@@ -45,6 +45,14 @@ G_BEGIN_DECLS
 #define GST_CHEESE_FILTER_CLASS_GET_CLASS(obj) \
   (G_TYPE_INSTANCE_GET_CLASS((obj),GST_TYPE_CHEESE_FILTER,GstcheesefilterClass))
 
+typedef enum {
+  GST_CHEESE_FILTER_COLOR_WHITE,
+  GST_CHEESE_FILTER_COLOR_BLACK,
+  GST_CHEESE_FILTER_COLOR_BLUE,
+  GST_CHEESE_FILTER_COLOR_GREEN,
+  GST_CHEESE_FILTER_COLOR_RED,
+} GstCheesefilterColor;
+
 typedef struct _Gstcheesefilter  Gstcheesefilter;
 typedef struct _GstcheesefilterClass GstcheesefilterClass;
 
@@ -53,7 +61,7 @@ struct _Gstcheesefilter
   GstOpencvVideoFilter element;
 
   gboolean silent;
-  gchar *color;
+  GstCheesefilterColor color;
   cv::Scalar cv_color;
   gdouble radius;
   guint n_circles;

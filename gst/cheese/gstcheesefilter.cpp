@@ -64,6 +64,7 @@ enum
 
 #define DEFAULT_RADIUS    0.02
 #define DEFAULT_N_CIRCLES 10
+#define DEFAULT_COLOR     GST_CHEESE_FILTER_COLOR_WHITE
 
 /* the capabilities of the inputs and outputs.
  *
@@ -86,7 +87,6 @@ G_DEFINE_TYPE (Gstcheesefilter, gst_cheesefilter, GST_TYPE_OPENCV_VIDEO_FILTER);
 GST_ELEMENT_REGISTER_DEFINE (cheesefilter, "cheesefilter", GST_RANK_NONE,
     GST_TYPE_CHEESE_FILTER);
 
-static void gst_cheesefilter_finalize (GObject * object);
 static void gst_cheesefilter_set_property (GObject * object,
     guint prop_id, const GValue * value, GParamSpec * pspec);
 static void gst_cheesefilter_get_property (GObject * object,
@@ -96,6 +96,27 @@ static GstFlowReturn gst_cheesefilter_transform_ip (GstOpencvVideoFilter *
     base, GstBuffer * outbuf, cv::Mat img);
 
 /* GObject vmethod implementations */
+
+#define GST_TYPE_CHEESE_FILTER_COLOR (gst_cheesefilter_color_get_type ())
+static GType
+gst_cheesefilter_color_get_type (void)
+{
+  static GType cheese_filter_color_type = 0;
+  static const GEnumValue color_types[] = {
+    {GST_CHEESE_FILTER_COLOR_WHITE, "White color", "white"},
+    {GST_CHEESE_FILTER_COLOR_BLACK, "Black color", "black"},
+    {GST_CHEESE_FILTER_COLOR_BLUE, "Blue color", "blue"},
+    {GST_CHEESE_FILTER_COLOR_GREEN, "Green color", "green"},
+    {GST_CHEESE_FILTER_COLOR_RED, "Red color", "red"},
+    {0, NULL, NULL}
+  };
+
+  if (!cheese_filter_color_type) {
+    cheese_filter_color_type =
+        g_enum_register_static ("GstCheesefilterColor", color_types);
+  }
+  return cheese_filter_color_type;
+}
 
 /* initialize the cheese_filter's class */
 static void
@@ -109,11 +130,10 @@ gst_cheesefilter_class_init (GstcheesefilterClass * klass)
 
   gobject_class->set_property = gst_cheesefilter_set_property;
   gobject_class->get_property = gst_cheesefilter_get_property;
-  gobject_class->finalize = gst_cheesefilter_finalize;
 
   g_object_class_install_property (gobject_class, PROP_COLOR,
-      g_param_spec_string ("color", "Color", "color: red, green, blue, white, black",
-          "white", (GParamFlags) (G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE)));
+      g_param_spec_enum ("color", "Color", "Circle color", GST_TYPE_CHEESE_FILTER_COLOR,
+          DEFAULT_COLOR, (GParamFlags) (G_PARAM_READWRITE | GST_PARAM_CONTROLLABLE)));
 
   g_object_class_install_property (gobject_class, PROP_RADIUS,
       g_param_spec_double ("radius", "Radius", "Radius size relative to image height",
@@ -153,21 +173,12 @@ static void
 gst_cheesefilter_init (Gstcheesefilter * filter)
 {
   filter->silent = FALSE;
-  filter->color = g_strdup ("white");
+  filter->color = DEFAULT_COLOR;
   filter->cv_color = cv::Scalar(255, 255, 255);
   filter->radius = DEFAULT_RADIUS;
   filter->n_circles = DEFAULT_N_CIRCLES;
   gst_opencv_video_filter_set_in_place (GST_OPENCV_VIDEO_FILTER_CAST (filter),
       TRUE);
-}
-
-static void
-gst_cheesefilter_finalize (GObject * object)
-{
-  Gstcheesefilter *filter = GST_CHEESE_FILTER (object);
-
-  g_free (filter->color);
-  G_OBJECT_CLASS (parent_class)->finalize (object);
 }
 
 static void
@@ -179,31 +190,27 @@ gst_cheesefilter_set_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_COLOR:
     {
-      static const gchar *const color_names[] = {"black", "white", "blue", "green", "red"};
-      static const cv::Scalar color_values[] = {
-        cv::Scalar(0, 0, 0),
-        cv::Scalar(255, 255, 255),
-        cv::Scalar(0, 0, 255),
-        cv::Scalar(0, 255, 0),
-        cv::Scalar(255, 0, 0)
-      };
-      const gchar *color = g_value_get_string (value);
-      guint i;
-
-      for (i = 0; i < G_N_ELEMENTS (color_names); i++) {
-        if (g_strcmp0 (color_names[i], color) == 0)
-          break;
-      }
-
-      if (i == G_N_ELEMENTS (color_names)) {
-        g_warning ("color %s is not supported.", color);
-        break;
-      }
-
       GST_OBJECT_LOCK (filter);
-      g_free (filter->color);
-      filter->color = g_strdup (color);
-      filter->cv_color = color_values[i];
+      filter->color = (GstCheesefilterColor) g_value_get_enum (value);
+      switch (filter->color) {
+        case GST_CHEESE_FILTER_COLOR_WHITE:
+          filter->cv_color = cv::Scalar (255, 255, 255);
+          break;
+        case GST_CHEESE_FILTER_COLOR_BLACK:
+          filter->cv_color = cv::Scalar (0, 0, 0);
+          break;
+        case GST_CHEESE_FILTER_COLOR_BLUE:
+          filter->cv_color = cv::Scalar (0, 0, 255);
+          break;
+        case GST_CHEESE_FILTER_COLOR_GREEN:
+          filter->cv_color = cv::Scalar (0, 255, 0);
+          break;
+        case GST_CHEESE_FILTER_COLOR_RED:
+          filter->cv_color = cv::Scalar (255, 0, 0);
+          break;
+        default:
+          g_assert_not_reached ();
+      }
       GST_OBJECT_UNLOCK (filter);
       break;
     }
@@ -232,7 +239,7 @@ gst_cheesefilter_get_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_COLOR:
       GST_OBJECT_LOCK (filter);
-      g_value_set_string (value, filter->color);
+      g_value_set_enum (value, filter->color);
       GST_OBJECT_UNLOCK (filter);
       break;
     case PROP_RADIUS:
